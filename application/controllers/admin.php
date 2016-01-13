@@ -1,0 +1,255 @@
+<?php
+if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+ 
+class Admin extends CI_Controller{
+	public function __construct(){
+		parent::__construct();
+		
+		if($this->session->userdata('status') != "login"){
+			redirect('home');
+		}
+	}
+	public function index(){
+		$data['artikel'] = $this->m_admin->home();
+		$this->load->view('admin/header');
+		$this->load->view('admin/panel');
+		$this->load->view('admin/v_home',$data);
+		$this->load->view('admin/footer');
+	}
+	
+	/* Katagori */
+	
+	public function kategori(){
+		$data['kategori'] = $this->m_admin->kategori();
+		$this->load->view('admin/header');
+		$this->load->view('admin/v_kategori',$data);
+		$this->load->view('admin/footer');
+	}
+	public function tambah_kategori(){		
+		$this->load->library('form_validation');
+		$this->form_validation->set_rules('kategori','kategori','required');
+		$this->form_validation->set_message('kategori','Kategori harus di isi');
+		if($this->form_validation->run()=="true"){
+			$data = array(
+				'kategori' => $this->input->post('kategori')
+				);
+			$this->m_admin->tambah_kategori($data);
+			redirect('admin/kategori/ditambah');
+		}else{			
+			$data['kategori'] = $this->m_admin->kategori();
+			$this->load->view('admin/header');
+			$this->load->view('admin/v_kategori',$data);
+			$this->load->view('admin/footer');
+		}
+	}
+	public function edit_kategori($id){
+		$data['kategori'] = $this->m_admin->kategori();
+		$data['edit_kategori'] = $this->m_admin->edit_kategori($id);
+		$this->load->view('admin/header');
+		$this->load->view('admin/v_kategori_edit',$data);
+		$this->load->view('admin/footer');
+	}
+	public function update_kategori(){
+		$data = array(
+			'kategori' => $this->input->post('kategori')
+			);
+		$id = $this->input->post('id');
+		$this->m_admin->update_kategori($id,$data);
+		redirect('admin/kategori/diupdate');
+	}
+	public function hapus_kategori($id){
+		$this->m_admin->hapus_kategori($id);
+		redirect('admin/kategori/dihapus');
+	}
+	
+	/* artikel */
+			
+	
+	
+	public function artikel(){
+		$data['artikel'] = $this->m_admin->artikel();		
+		$this->load->view('admin/header');
+		$this->load->view('admin/v_artikel',$data);
+		$this->load->view('admin/footer');
+	}	
+	
+	public function tulis_artikel(){
+		$this->load->library('form_validation');
+		$data['kategori'] = $this->m_admin->kategori();
+		$this->load->view('admin/header');
+		$this->load->view('admin/v_artikel_baru',$data);
+		$this->load->view('admin/footer');
+		}	
+	
+	public function artikel_act(){
+		$this->load->library('form_validation');
+		$this->form_validation->set_rules('judul','judul','required');
+		$this->form_validation->set_rules('isi','isi','required');
+		$this->form_validation->set_rules('kategori','kategori','required');
+		if($this->form_validation->run() != true ){
+			$data['kategori'] = $this->m_admin->kategori();
+			$this->load->view('admin/header');
+			$this->load->view('admin/v_artikel_baru',$data);
+			$this->load->view('admin/footer');
+		}else{
+			$judul = $this->input->post('judul');
+			$isi = $this->input->post('isi');
+			$kategori = $this->input->post('kategori');
+			$config['upload_path'] = './image/';
+			$config['allowed_types'] = 'gif|jpg|png';			
+			$this->load->library('upload', $config);
+			$this->upload->do_upload('foto');
+			$data = array('upload_data' => $this->upload->data());
+			$d = array(
+				'judul' => $judul,
+				'isi_artikel' => $isi,
+				'kategori' => $kategori,
+				'tanggal' => date('Y-m-d'),
+				'author' => $this->session->userdata('id'),
+				'foto' => $data['upload_data']['file_name']
+				);
+			$this->m_admin->artikel_act($d);
+			redirect('admin/artikel/oke','refresh');
+		}		
+	}
+	
+	public function edit_artikel($id){
+		$this->load->library('form_validation');
+		$data['artikel'] = $this->m_admin->edit_artikel($id);
+		$data['kategori'] = $this->m_admin->kategori();
+		$this->load->view('admin/header');
+		$this->load->view('admin/v_artikel_edit',$data);
+		$this->load->view('admin/footer');
+	}
+	public function update_artikel(){
+		$this->load->library('form_validation');
+		$id = $this->input->post('id');
+		$this->form_validation->set_rules('judul','judul','required');
+		$this->form_validation->set_rules('isi','isi','required');
+		$this->form_validation->set_rules('kategori','kategori','required');
+		if($this->form_validation->run() != true ){
+			$data['artikel'] = $this->m_admin->edit_artikel($id);
+			$data['kategori'] = $this->m_admin->kategori();
+			$this->load->view('admin/header');
+			$this->load->view('admin/v_artikel_edit',$data);
+			$this->load->view('admin/footer');
+		}else{			
+			$judul = $this->input->post('judul');
+			$isi = $this->input->post('isi');
+			$kategori = $this->input->post('kategori');
+			if($_FILES['foto']['name'] == ""){				
+				$d = array(
+					'judul' => $judul,
+					'isi_artikel' => $isi,
+					'kategori' => $kategori					
+					);
+				$this->m_admin->update_artikel($d,$id);
+				redirect('admin/artikel/diupdate','refresh');
+			}else{				
+				$config['upload_path'] = './image/';
+				$config['allowed_types'] = 'gif|jpg|png';			
+				$this->load->library('upload', $config);
+				$this->upload->do_upload('foto');
+				$data = array('upload_data' => $this->upload->data());
+				$d = array(
+					'judul' => $judul,
+					'isi_artikel' => $isi,
+					'kategori' => $kategori,										
+					'foto' => $data['upload_data']['file_name']
+					);
+				$this->m_admin->update_artikel($d,$id);
+				redirect('admin/artikel/diupdate','refresh');
+			}			
+		}		
+	}
+	
+	public function hapus_artikel($id){
+			
+		$this->m_admin->hapus_artikel($id);
+		redirect('admin/artikel/dihapus','refresh');
+	}
+	
+	/* pengaturan */
+	
+		function pengaturan(){
+		$data['pengaturan'] = $this->m_admin->pengaturan();
+		$this->load->view('admin/header');
+		$this->load->view('admin/v_pengaturan',$data);
+		$this->load->view('admin/footer');
+	}
+
+	public function update_pengaturan(){							
+		$judul = $this->input->post('judul');
+		$deskripsi = $this->input->post('deskripsi');		
+		if($_FILES['logo']['name'] == ""){				
+			$data = array(
+				'judul_web' => $judul,
+				'desk_web' => $deskripsi				
+				);
+			$this->m_admin->update_pengaturan($data);
+			redirect('admin/pengaturan/sukses','refresh');
+		}else{				
+			$config['upload_path'] = './gambar/';
+			$config['allowed_types'] = 'gif|jpg|png';			
+			$this->load->library('upload', $config);
+			$this->upload->do_upload('logo');
+			$data = array('upload_data' => $this->upload->data());
+			$d = array(
+				'judul_web' => $judul,
+				'desk_web' => $deskripsi,					
+				'logo_web' => $data['upload_data']['file_name']
+				);
+			$this->m_admin->update_pengaturan($d);
+			redirect('admin/pengaturan/sukses','refresh');
+		}			
+	}
+
+	/* Galery */
+
+	public function galery(){
+
+		$data['galery'] = $this->m_admin->galery();		
+		$this->load->view('admin/header');
+		$this->load->view('admin/v_galery',$data);
+		$this->load->view('admin/footer');
+
+	}
+	public function add_album(){
+		$this->load->library('form_validation');
+		$this->load->view('admin/header');
+		$this->load->view('admin/add_album');
+		$this->load->view('admin/footer');
+	}
+	
+	public function album_act(){
+		$this->load->library('form_validation');
+		$this->form_validation->set_rules('nama_album','nama_album','required');
+		if($this->form_validation->run() != true ){
+			$this->load->view('admin/header');
+			$this->load->view('admin/add_album');
+			$this->load->view('admin/footer');
+		}else{
+			$nama_album = $this->input->post('nama_album');
+			$config['upload_path'] = './image/galery/';
+			$config['allowed_types'] = 'gif|jpg|png';			
+			$this->load->library('upload', $config);
+			$this->upload->do_upload('cover_album');
+			$data = array('upload_data' => $this->upload->data());
+			$d = array(
+				'nama_album' => $nama_album,
+				'tanggal' => date('Y-m-d'),
+				'author' => $this->session->userdata('id'),
+				'cover_album' => $data['upload_data']['file_name']
+				);
+			$this->m_admin->album_act($d);
+			redirect('admin/galery/oke','refresh');
+		}		
+	}
+
+	public function hapus_album($id){
+			
+		$this->m_admin->hapus_album($id);
+		redirect('admin/galery/dihapus','refresh');
+	}
+
+}
